@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Spesa Smart & Cloud Famiglia</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased bg-slate-50 select-none">
+
+    <div id="app" class="flex flex-col h-full max-w-md md:max-w-4xl mx-auto w-full bg-white shadow-xl relative overflow-hidden">
+        
+        <!-- HEADER PRINCIPALE -->
+        <header class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4 shadow-md shrink-0">
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-white/10 rounded-xl backdrop-blur-md">
+                        <i data-lucide="shopping-cart" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight">SpesaSmart <span class="text-xs bg-emerald-400/30 text-emerald-100 px-2 py-0.5 rounded-full border border-white/20">Cloud Live</span></h1>
+                        <p class="text-xs text-emerald-100 flex items-center gap-1">
+                            <span id="sync-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            <span id="sync-status-text">Inizializzazione...</span>
+                        </p>
+                    </div>
+                </div>
+                <button id="btn-family-code" onclick="openFamilyModal()" class="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-xs text-white font-medium px-3 py-1.5 rounded-lg border border-white/20 transition-all">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <span id="header-family-id">Codice Famiglia</span>
+                </button>
+            </div>
+
+            <!-- TABS -->
+            <div class="flex bg-emerald-800/40 p-1 rounded-xl mt-3 backdrop-blur-sm">
+                <button id="tab-active-btn" onclick="switchTab('active')" class="flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all bg-white text-emerald-700 shadow-sm">
+                    <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                    Lista Spesa (<span id="active-count">0</span>)
+                </button>
+                <button id="tab-catalog-btn" onclick="switchTab('catalog')" class="flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all text-emerald-100 hover:text-white">
+                    <i data-lucide="grid" class="w-4 h-4"></i>
+                    Catalogo Prodotti
+                </button>
+                <button id="tab-stats-btn" onclick="switchTab('stats')" class="flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all text-emerald-100 hover:text-white">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                    Confronto Prezzi
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTENUTO PRINCIPALE SCROLLABILE -->
+        <main class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50 relative">
+            
+            <!-- VISTA 1: LISTA SPESA ATTIVA -->
+            <section id="view-active" class="space-y-4">
+                
+                <!-- Barra Azioni Rapide Lista Attiva -->
+                <div class="flex items-center justify-between gap-2 bg-white p-3 rounded-xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center gap-2">
+                        <select id="active-supermarket-filter" onchange="renderActiveList()" class="text-xs bg-slate-100 border-0 rounded-lg p-2 font-medium text-slate-700 focus:ring-2 focus:ring-emerald-500">
+                            <option value="ALL">🛒 Tutti i supermercati</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="shareWhatsApp()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" title="Condividi su WhatsApp">
+                            <i data-lucide="share-2" class="w-4 h-4 text-emerald-600"></i>
+                            <span class="hidden sm:inline">Condividi</span>
+                        </button>
+                        <button onclick="clearCheckedItems()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors" title="Rimuovi spuntati">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            <span class="hidden sm:inline">Pulisci</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Totale Stimato Card -->
+                <div id="active-summary-card" class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-md flex justify-between items-center">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Totale stimato da acquistare</p>
+                        <h2 class="text-2xl font-bold text-emerald-400" id="total-active-price">€ 0.00</h2>
+                        <p class="text-[11px] text-slate-300 mt-0.5" id="total-active-savings">Risparmio offerte applicate: €0.00</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="best-supermarket-badge">
+                            Punto vendita suggerito: --
+                        </span>
+                    </div>
+                </div>
+
+                <!-- LISTA ARTICOLI IN CORSO -->
+                <div id="active-items-container" class="space-y-2">
+                    <!-- Articoli renderizzati via JS -->
+                </div>
+
+                <div id="active-empty-state" class="text-center py-12 px-4 hidden">
+                    <div class="w-16 h-16 mx-auto mb-3 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+                        <i data-lucide="check-circle-2" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-slate-700">La lista è vuota!</h3>
+                    <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Vai nel Catalogo per aggiungere i prodotti che acquisti di solito.</p>
+                    <button onclick="switchTab('catalog')" class="mt-4 px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">
+                        Apri Catalogo
+                    </button>
+                </div>
+
+            </section>
+
+            <!-- VISTA 2: CATALOGO PRODOTTI -->
+            <section id="view-catalog" class="space-y-4 hidden">
+                
+                <!-- Filtri & Ricerca Catalogo -->
+                <div class="space-y-2">
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="catalog-search" oninput="renderCatalog()" placeholder="Cerca prodotto..." class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <button onclick="openProductModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 shrink-0 transition-colors shadow-sm">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span class="hidden sm:inline">Nuovo Articolo</span>
+                        </button>
+                    </div>
+
+                    <!-- Badge Filtri Categoria e Offerta -->
+                    <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs custom-scrollbar">
+                        <button id="cat-filter-all" onclick="setCategoryFilter('ALL')" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium shrink-0">Tutti</button>
+                        <button id="cat-filter-offers" onclick="setCategoryFilter('OFFERS')" class="px-3 py-1.5 rounded-lg bg-white text-amber-600 font-semibold border border-amber-200 hover:bg-amber-50 shrink-0 flex items-center gap-1">
+                            🔥 In Offerta
+                        </button>
+                        <button id="cat-filter-ortofrutta" onclick="setCategoryFilter('Ortofrutta')" class="px-3 py-1.5 rounded-lg bg-white text-slate-600 font-medium border border-slate-200 hover:bg-slate-50 shrink-0">🍏 Ortofrutta</button>
+                        <button id="cat-filter-freschi" onclick="setCategoryFilter('Freschi')" class="px-3 py-1.5 rounded-lg bg-white text-slate-600 font-medium border border-slate-200 hover:bg-slate-50 shrink-0">🧀 Freschi</button>
+                        <button id="cat-filter-dispensa" onclick="setCategoryFilter('Dispensa')" class="px-3 py-1.5 rounded-lg bg-white text-slate-600 font-medium border border-slate-200 hover:bg-slate-50 shrink-0">Pasta & Dispensa</button>
+                        <button id="cat-filter-bevande" onclick="setCategoryFilter('Bevande')" class="px-3 py-1.5 rounded-lg bg-white text-slate-600 font-medium border border-slate-200 hover:bg-slate-50 shrink-0">🥤 Bevande</button>
+                        <button id="cat-filter-igiene" onclick="setCategoryFilter('Igiene & Casa')" class="px-3 py-1.5 rounded-lg bg-white text-slate-600 font-medium border border-slate-200 hover:bg-slate-50 shrink-0">🧼 Igiene & Casa</button>
+                    </div>
+                </div>
+
+                <!-- LISTA CATALOGO -->
+                <div id="catalog-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Card catalogo inserite da JS -->
+                </div>
+
+            </section>
+
+            <!-- VISTA 3: CONFRONTO PREZZI & STATISTICHE SUPERMERCATI -->
+            <section id="view-stats" class="space-y-4 hidden">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                        <i data-lucide="calculator" class="w-4 h-4 text-emerald-600"></i>
+                        Dove conviene fare la spesa completa?
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">Calcolo del costo totale per l'intera lista spesa attiva se acquistata in un unico supermercato.</p>
+                    
+                    <div id="supermarket-comparison-list" class="space-y-3">
+                        <!-- Comparativa renderizzata via JS -->
+                    </div>
+                </div>
+
+                <!-- Gestione Elenco Supermercati -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-slate-800">Supermercati Gestiti</h3>
+                        <button onclick="promptAddSupermarket()" class="text-xs text-emerald-600 font-semibold hover:underline flex items-center gap-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi
+                        </button>
+                    </div>
+                    <div id="supermarket-tags-container" class="flex flex-wrap gap-2">
+                        <!-- Tag supermercati -->
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODALE CODICE FAMIGLIA / CLOUD -->
+    <div id="modal-family" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Sincronizzazione Cloud</h3>
+                        <p class="text-xs text-slate-500">Stanza condivisa di Famiglia</p>
+                    </div>
+                </div>
+                <button onclick="closeFamilyModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Inserisci lo stesso codice su tutti i telefoni dei membri della tua famiglia. Tutte le modifiche ai prodotti e alla spesa si aggiorneranno all'istante!
+            </p>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Codice Famiglia / Stanza</label>
+                <div class="relative">
+                    <input type="text" id="input-family-code" placeholder="Es. FAMIGLIA-ROSSI" class="w-full pl-3 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 uppercase font-mono tracking-wider font-bold text-slate-800">
+                    <button onclick="generateRandomFamilyCode()" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 p-1" title="Genera Casuale">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeFamilyModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Annulla</button>
+                <button onclick="saveFamilyCode()" class="px-4 py-2 text-xs font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-sm">Connetti Stanza</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE PRODOTTO (AGGIUNGI / MODIFICA) -->
+    <div id="modal-product" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-base font-bold text-slate-800" id="modal-product-title">Nuovo Prodotto</h3>
+                <button onclick="closeProductModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="product-form" onsubmit="handleProductFormSubmit(event)" class="space-y-3">
+                <input type="hidden" id="prod-id">
+                
+                <div class="grid grid-cols-4 gap-2">
+                    <div class="col-span-1">
+                        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Emoji</label>
+                        <input type="text" id="prod-emoji" maxlength="2" placeholder="🍎" value="🛒" class="w-full text-center text-lg p-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div class="col-span-3">
+                        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Nome Prodotto *</label>
+                        <input type="text" id="prod-name" required placeholder="Es. Latte Parzialmente Scremato" class="w-full p-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-medium">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Categoria</label>
+                        <select id="prod-category" class="w-full p-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500">
+                            <option value="Ortofrutta"> Ortofrutta</option>
+                            <option value="Freschi">🧀 Freschi</option>
+                            <option value="Dispensa">🍞 Pasta & Dispensa</option>
+                            <option value="Bevande">🥤 Bevande</option>
+                            <option value="Surgelati">❄️ Surgelati</option>
+                            <option value="Igiene & Casa">🧼 Igiene & Casa</option>
+                            <option value="Altro">📦 Altro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Unità di Misura / Note</label>
+                        <input type="text" id="prod-unit" placeholder="Es. 1L, Confezione 6x" class="w-full p-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+
+                <!-- PREZZI PER SUPERMERCATO -->
+                <div class="border-t border-slate-100 pt-3">
+                    <label class="block text-xs font-bold text-slate-800 mb-1">Prezzi nei Supermercati</label>
+                    <p class="text-[11px] text-slate-500 mb-2">Inserisci i prezzi per confrontare e trovare l'offerta migliore.</p>
+                    
+                    <div id="product-prices-inputs" class="space-y-2">
+                        <!-- Righe dinamiche prezzi supermercati -->
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center pt-3 border-t border-slate-100">
+                    <button type="button" id="btn-delete-product" onclick="deleteCurrentProduct()" class="px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl hidden">
+                        Elimina
+                    </button>
+                    <div class="flex gap-2 ml-auto">
+                        <button type="button" onclick="closeProductModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Annulla</button>
+                        <button type="submit" class="px-4 py-2 text-xs font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-sm">Salva Prodotto</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NOTIFICA TOAST -->
+    <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-emerald-400"></i>
+        <span id="toast-message">Notifica</span>
+    </div>
+
+    <!-- FIREBASE SDK & APP SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // APP CONFIG & GLOBAL STATE
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'spesa-smart-family-v1';
+        let firebaseConfig = null;
+        try {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                firebaseConfig = JSON.parse(__firebase_config);
+            }
+        } catch(e) { console.error("Firebase config error:", e); }
+
+        // Fallback Firebase Config se non fornito dall'ambiente
+        if (!firebaseConfig) {
+            firebaseConfig = {
+                apiKey: "AIzaSyDemoConfigForFamilyShoppingListOnly",
+                authDomain: "demo-spesa.firebaseapp.com",
+                projectId: "demo-spesa",
+                storageBucket: "demo-spesa.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:demo"
+            };
+        }
+
+        // State dell'applicazione
+        const state = {
+            familyCode: localStorage.getItem('spesa_family_code') || 'FAMIGLIA-DEMO',
+            supermarkets: ['Esselunga', 'Coop', 'Conad', 'Lidl', 'Eurospin'],
+            products: [],
+            activeTab: 'active',
+            categoryFilter: 'ALL',
+            searchQuery: '',
+            currentUser: null,
+            db: null,
+            auth: null,
+            unsubscribeSync: null,
+            isOnline: false
+        };
+
+        // Prodotti di default per primo avvio
+        const defaultProducts = [
+            {
+                id: 'prod-1',
+                name: 'Latte Intero Fresco',
+                category: 'Freschi',
+                emoji: '🥛',
+                unit: '1 Litro',
+                prices: {
+                    'Esselunga': { price: 1.49, offer: true },
+                    'Coop': { price: 1.69, offer: false },
+                    'Conad': { price: 1.59, offer: false },
+                    'Lidl': { price: 1.29, offer: false }
+                },
+                inList: true,
+                checked: false,
+                quantity: 2,
+                note: 'Prendere quelli con scadenza più lontana'
+            },
+            {
+                id: 'prod-2',
+                name: 'Mela Golden',
+                category: 'Ortofrutta',
+                emoji: '🍎',
+                unit: '1 kg',
+                prices: {
+                    'Esselunga': { price: 2.19, offer: false },
+                    'Coop': { price: 1.99, offer: true },
+                    'Lidl': { price: 1.49, offer: false }
+                },
+                inList: true,
+                checked: true,
+                quantity: 1,
+                note: ''
+            },
+            {
+                id: 'prod-3',
+                name: 'Pasta Barilla Penne',
+                category: 'Dispensa',
+                emoji: '🍝',
+                unit: '500g',
+                prices: {
+                    'Esselunga': { price: 0.89, offer: true },
+                    'Coop': { price: 1.15, offer: false },
+                    'Conad': { price: 1.20, offer: false },
+                    'Lidl': { price: 0.79, offer: false }
+                },
+                inList: false,
+                checked: false,
+                quantity: 1,
+                note: ''
+            },
+            {
+                id: 'prod-4',
+                name: 'Caffè Lavazza Qualità Rossa',
+                category: 'Dispensa',
+                emoji: '☕',
+                unit: '2x250g',
+                prices: {
+                    'Esselunga': { price: 5.99, offer: false },
+                    'Coop': { price: 4.49, offer: true },
+                    'Conad': { price: 5.80, offer: false }
+                },
+                inList: true,
+                checked: false,
+                quantity: 1,
+                note: 'In offerta volantino!'
+            },
+            {
+                id: 'prod-5',
+                name: 'Detersivo Piatti',
+                category: 'Igiene & Casa',
+                emoji: '🧼',
+                unit: '1L',
+                prices: {
+                    'Esselunga': { price: 1.99, offer: false },
+                    'Lidl': { price: 1.19, offer: false }
+                },
+                inList: false,
+                checked: false,
+                quantity: 1,
+                note: ''
+            }
+        ];
+
+        // INIZIALIZZAZIONE FIREBASE & AUTENTICAZIONE
+        async function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                state.db = getFirestore(app);
+                state.auth = getAuth(app);
+
+                // Auth check & signin
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(state.auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(state.auth);
+                }
+
+                onAuthStateChanged(state.auth, (user) => {
+                    if (user) {
+                        state.currentUser = user;
+                        setupCloudSync();
+                    }
+                });
+
+            } catch (err) {
+                console.warn("Firebase fallback su LocalStorage mode:", err);
+                updateSyncStatus(false, "Locale (Offline)");
+                loadLocalData();
+            }
+        }
+
+        // SETUP CLOUD SYNC CON FIRESTORE (RULE 1 & 2 COMPLIANT)
+        function setupCloudSync() {
+            if (!state.db || !state.currentUser) return;
+
+            if (state.unsubscribeSync) state.unsubscribeSync();
+
+            updateSyncStatus(true, `Connesso: ${state.familyCode}`);
+            document.getElementById('header-family-id').innerText = state.familyCode;
+
+            // Percorso strict specificato nelle istruzioni: /artifacts/{appId}/public/data/{collectionName}
+            const roomDocRef = doc(state.db, 'artifacts', appId, 'public', 'data', 'family_rooms', state.familyCode);
+
+            state.unsubscribeSync = onSnapshot(roomDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.products) state.products = data.products;
+                    if (data.supermarkets) state.supermarkets = data.supermarkets;
+                    renderApp();
+                } else {
+                    // Inizializza stanza con prodotti di default se vuota
+                    state.products = defaultProducts;
+                    saveToCloud();
+                }
+            }, (error) => {
+                console.error("Errore Sincronizzazione Cloud:", error);
+                updateSyncStatus(false, "Errore Sync");
+                loadLocalData();
+            });
+        }
+
+        // SALVATAGGIO CLOUD
+        async function saveToCloud() {
+            renderApp(); // Aggiorna UI istantaneamente
+            saveLocalData(); // Salva copia locale backup
+
+            if (!state.db || !state.currentUser) return;
+
+            try {
+                const roomDocRef = doc(state.db, 'artifacts', appId, 'public', 'data', 'family_rooms', state.familyCode);
+                await setDoc(roomDocRef, {
+                    products: state.products,
+                    supermarkets: state.supermarkets,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: state.currentUser.uid
+                }, { merge: true });
+            } catch (err) {
+                console.error("Errore scrittura cloud:", err);
+            }
+        }
+
+        function saveLocalData() {
+            localStorage.setItem(`spesa_products_${state.familyCode}`, JSON.stringify(state.products));
+            localStorage.setItem(`spesa_supermarkets_${state.familyCode}`, JSON.stringify(state.supermarkets));
+        }
+
+        function loadLocalData() {
+            const localProds = localStorage.getItem(`spesa_products_${state.familyCode}`);
+            const localSupers = localStorage.getItem(`spesa_supermarkets_${state.familyCode}`);
+            state.products = localProds ? JSON.parse(localProds) : defaultProducts;
+            state.supermarkets = localSupers ? JSON.parse(localSupers) : ['Esselunga', 'Coop', 'Conad', 'Lidl', 'Eurospin'];
+            renderApp();
+        }
+
+        function updateSyncStatus(isOnline, text) {
+            state.isOnline = isOnline;
+            const dot = document.getElementById('sync-status-dot');
+            const statusText = document.getElementById('sync-status-text');
+            if (dot && statusText) {
+                dot.className = `w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`;
+                statusText.innerText = text;
+            }
+        }
+
+        // UTILITIES CALCOLO PREZZI CONVENIENTI
+        function getBestPriceInfo(product) {
+            if (!product.prices || Object.keys(product.prices).length === 0) {
+                return { supermarket: 'N/D', price: 0, isOffer: false };
+            }
+            
+            let bestSupermarket = null;
+            let minPrice = Infinity;
+            let isOffer = false;
+
+            for (const [supermarket, info] of Object.entries(product.prices)) {
+                if (info.price && info.price < minPrice) {
+                    minPrice = info.price;
+                    bestSupermarket = supermarket;
+                    isOffer = !!info.offer;
+                }
+            }
+
+            return { supermarket: bestSupermarket, price: minPrice === Infinity ? 0 : minPrice, isOffer };
+        }
+
+        // RENDER GENERALE DELL'INTERFACCIA
+        window.renderApp = function() {
+            renderActiveList();
+            renderCatalog();
+            renderStatsView();
+            updateSupermarketFilters();
+            lucide.createIcons();
+        };
+
+        // RENDER VISTA 1: LISTA ATTIVA
+        function renderActiveList() {
+            const container = document.getElementById('active-items-container');
+            const emptyState = document.getElementById('active-empty-state');
+            const filterSupermarket = document.getElementById('active-supermarket-filter').value;
+
+            let activeItems = state.products.filter(p => p.inList);
+            
+            if (filterSupermarket !== 'ALL') {
+                activeItems = activeItems.filter(p => p.prices && p.prices[filterSupermarket]);
+            }
+
+            document.getElementById('active-count').innerText = state.products.filter(p => p.inList && !p.checked).length;
+
+            if (activeItems.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                document.getElementById('active-summary-card').classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            document.getElementById('active-summary-card').classList.remove('hidden');
+
+            // Calcolo totale stimato e supermercato consigliato
+            let totalPrice = 0;
+            let totalSavings = 0;
+            const supermarketTotals = {};
+
+            activeItems.forEach(item => {
+                const best = getBestPriceInfo(item);
+                const itemPrice = best.price * (item.quantity || 1);
+                totalPrice += itemPrice;
+
+                if (best.isOffer) {
+                    totalSavings += (best.price * 0.2) * (item.quantity || 1); // stima risparmio
+                }
+
+                // Somma per ogni supermercato disponibile
+                Object.entries(item.prices || {}).forEach(([sup, priceObj]) => {
+                    if (!supermarketTotals[sup]) supermarketTotals[sup] = 0;
+                    supermarketTotals[sup] += (priceObj.price || 0) * (item.quantity || 1);
+                });
+            });
+
+            document.getElementById('total-active-price').innerText = `€ ${totalPrice.toFixed(2)}`;
+            document.getElementById('total-active-savings').innerText = `Risparmio stima offerte: €${totalSavings.toFixed(2)}`;
+
+            // Trova supermercato più economico in assoluto per la lista
+            let bestOverallSupermarket = null;
+            let minTotal = Infinity;
+            Object.entries(supermarketTotals).forEach(([sup, total]) => {
+                if (total < minTotal) {
+                    minTotal = total;
+                    bestOverallSupermarket = sup;
+                }
+            });
+
+            document.getElementById('best-supermarket-badge').innerText = bestOverallSupermarket 
+                ? `Migliore per l'intera spesa: ${bestOverallSupermarket} (€${minTotal.toFixed(2)})`
+                : 'Più conveniente: N/D';
+
+            // HTML Generazione Card
+            container.innerHTML = activeItems.map(item => {
+                const best = getBestPriceInfo(item);
+                const currentPrice = (best.price * (item.quantity || 1)).toFixed(2);
+
+                return `
+                    <div class="bg-white rounded-xl p-3 border ${item.checked ? 'border-slate-200 bg-slate-50/70 opacity-75' : 'border-slate-200 shadow-sm'} transition-all flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <button onclick="toggleCheckItem('${item.id}')" class="w-6 h-6 rounded-lg border-2 ${item.checked ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300'} flex items-center justify-center shrink-0 transition-colors">
+                                ${item.checked ? '<i data-lucide="check" class="w-4 h-4"></i>' : ''}
+                            </button>
+
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-base">${item.emoji || '🛒'}</span>
+                                    <h4 class="text-xs font-bold text-slate-800 ${item.checked ? 'line-through text-slate-400' : ''} truncate">${item.name}</h4>
+                                    ${best.isOffer ? '<span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.2 rounded-md flex items-center gap-0.5">🔥 Offerta</span>' : ''}
+                                </div>
+                                
+                                <div class="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
+                                    <span>${item.unit || ''}</span>
+                                    <span>•</span>
+                                    <span class="text-emerald-700 font-medium">Trovi a: <strong>${best.supermarket || 'Qualsiasi'}</strong> (€${best.price.toFixed(2)})</span>
+                                </div>
+                                ${item.note ? `<p class="text-[10px] text-slate-400 italic mt-0.5 truncate">Note: ${item.note}</p>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0">
+                            <!-- Quantità -->
+                            <div class="flex items-center bg-slate-100 rounded-lg border border-slate-200 p-0.5">
+                                <button onclick="changeQuantity('${item.id}', -1)" class="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-white rounded-md text-xs font-bold">-</button>
+                                <span class="w-5 text-center text-xs font-bold text-slate-700">${item.quantity || 1}</span>
+                                <button onclick="changeQuantity('${item.id}', 1)" class="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-white rounded-md text-xs font-bold">+</button>
+                            </div>
+
+                            <div class="text-right min-w-[50px]">
+                                <span class="text-xs font-bold text-slate-800 block">€${currentPrice}</span>
+                            </div>
+
+                            <button onclick="toggleInList('${item.id}')" class="text-slate-300 hover:text-red-500 p-1">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // RENDER VISTA 2: CATALOGO PRODOTTI
+        function renderCatalog() {
+            const container = document.getElementById('catalog-container');
+            const search = document.getElementById('catalog-search').value.toLowerCase();
+            
+            let filtered = state.products.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(search) || (p.category && p.category.toLowerCase().includes(search));
+                
+                if (state.categoryFilter === 'ALL') return matchesSearch;
+                if (state.categoryFilter === 'OFFERS') {
+                    const hasOffer = Object.values(p.prices || {}).some(pr => pr.offer);
+                    return matchesSearch && hasOffer;
+                }
+                return matchesSearch && p.category === state.categoryFilter;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-8 text-slate-400">
+                        <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-1 opacity-50"></i>
+                        <p class="text-xs">Nessun prodotto trovato nel catalogo.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => {
+                const best = getBestPriceInfo(item);
+                const isInList = item.inList;
+
+                return `
+                    <div class="bg-white rounded-xl p-3 border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-2">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">${item.emoji || '🛒'}</span>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-800 leading-tight">${item.name}</h4>
+                                    <span class="text-[10px] text-slate-400 font-medium">${item.category || 'Generale'} • ${item.unit || ''}</span>
+                                </div>
+                            </div>
+                            <button onclick="openProductModal('${item.id}')" class="text-slate-300 hover:text-slate-600 p-1">
+                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+
+                        <!-- Prezzi nei supermercati -->
+                        <div class="bg-slate-50 p-2 rounded-lg space-y-1">
+                            <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex justify-between">
+                                <span>Supermercato</span>
+                                <span>Prezzo</span>
+                            </div>
+                            ${Object.entries(item.prices || {}).map(([sup, info]) => `
+                                <div class="flex justify-between items-center text-[11px] ${sup === best.supermarket ? 'font-bold text-emerald-700' : 'text-slate-600'}">
+                                    <span class="flex items-center gap-1">
+                                        ${sup}
+                                        ${info.offer ? '<span class="text-[9px] bg-amber-100 text-amber-700 px-1 rounded font-bold">OFFERTA</span>' : ''}
+                                    </span>
+                                    <span>€${parseFloat(info.price).toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Bottone Aggiungi a Lista -->
+                        <button onclick="toggleInList('${item.id}')" class="w-full py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${isInList ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-900 text-white hover:bg-slate-800'}">
+                            <i data-lucide="${isInList ? 'check' : 'plus'}" class="w-3.5 h-3.5"></i>
+                            ${isInList ? 'In Lista Spesa' : 'Aggiungi in Lista'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        // RENDER VISTA 3: CONFRONTO E STATISTICHE
+        function renderStatsView() {
+            const container = document.getElementById('supermarket-comparison-list');
+            const activeItems = state.products.filter(p => p.inList);
+
+            if (activeItems.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 italic">Aggiungi prodotti alla lista per visualizzare il confronto totale dei supermercati.</p>`;
+                renderSupermarketTags();
+                return;
+            }
+
+            // Calcolo totale spesa per ciascun supermercato
+            const results = state.supermarkets.map(sup => {
+                let total = 0;
+                let missingCount = 0;
+                let offerCount = 0;
+
+                activeItems.forEach(item => {
+                    if (item.prices && item.prices[sup] && item.prices[sup].price) {
+                        total += item.prices[sup].price * (item.quantity || 1);
+                        if (item.prices[sup].offer) offerCount++;
+                    } else {
+                        missingCount++;
+                        // Usa il miglior prezzo disponibile come stima se il prodotto non ha prezzo specifico per quel supermercato
+                        const best = getBestPriceInfo(item);
+                        total += best.price * (item.quantity || 1);
+                    }
+                });
+
+                return { supermarket: sup, total, missingCount, offerCount };
+            });
+
+            // Ordina per convenienza
+            results.sort((a, b) => a.total - b.total);
+
+            container.innerHTML = results.map((res, index) => `
+                <div class="flex items-center justify-between p-3 rounded-xl border ${index === 0 ? 'bg-emerald-50/60 border-emerald-300' : 'bg-slate-50 border-slate-200'}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-full ${index === 0 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'} font-bold text-xs flex items-center justify-center">
+                            #${index + 1}
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                ${res.supermarket}
+                                ${index === 0 ? '<span class="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded-full font-medium">Più Economico</span>' : ''}
+                            </h4>
+                            <p class="text-[10px] text-slate-500">
+                                ${res.offerCount} articoli in offerta ${res.missingCount > 0 ? `• (${res.missingCount} stimati)` : ''}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-sm font-extrabold ${index === 0 ? 'text-emerald-700' : 'text-slate-700'}">€${res.total.toFixed(2)}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            renderSupermarketTags();
+        }
+
+        function renderSupermarketTags() {
+            const container = document.getElementById('supermarket-tags-container');
+            container.innerHTML = state.supermarkets.map(sup => `
+                <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 text-xs px-2.5 py-1 rounded-lg font-medium">
+                    ${sup}
+                    <button onclick="removeSupermarket('${sup}')" class="text-slate-400 hover:text-red-500">
+                        <i data-lucide="x" class="w-3 h-3"></i>
+                    </button>
+                </span>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function updateSupermarketFilters() {
+            const select = document.getElementById('active-supermarket-filter');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="ALL">🛒 Tutti i supermercati</option>' + 
+                state.supermarkets.map(s => `<option value="${s}">${s}</option>`).join('');
+            select.value = currentVal;
+        }
+
+        // AZIONI PRODOTTI E LISTA
+        window.toggleCheckItem = function(id) {
+            const prod = state.products.find(p => p.id === id);
+            if (prod) {
+                prod.checked = !prod.checked;
+                saveToCloud();
+            }
+        };
+
+        window.toggleInList = function(id) {
+            const prod = state.products.find(p => p.id === id);
+            if (prod) {
+                prod.inList = !prod.inList;
+                if (prod.inList) prod.checked = false;
+                saveToCloud();
+                showToast(prod.inList ? `${prod.name} aggiunto alla lista!` : `${prod.name} rimosso dalla lista`);
+            }
+        };
+
+        window.changeQuantity = function(id, delta) {
+            const prod = state.products.find(p => p.id === id);
+            if (prod) {
+                prod.quantity = Math.max(1, (prod.quantity || 1) + delta);
+                saveToCloud();
+            }
+        };
+
+        window.clearCheckedItems = function() {
+            let count = 0;
+            state.products.forEach(p => {
+                if (p.inList && p.checked) {
+                    p.inList = false;
+                    p.checked = false;
+                    count++;
+                }
+            });
+            if (count > 0) {
+                saveToCloud();
+                showToast(`Rimosso ${count} articoli completati.`);
+            }
+        };
+
+        // GESTIONE TAB & FILTRI
+        window.switchTab = function(tabName) {
+            state.activeTab = tabName;
+            ['active', 'catalog', 'stats'].forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`tab-${t}-btn`);
+                if (t === tabName) {
+                    view.classList.remove('hidden');
+                    btn.className = 'flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all bg-white text-emerald-700 shadow-sm';
+                } else {
+                    view.classList.add('hidden');
+                    btn.className = 'flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all text-emerald-100 hover:text-white';
+                }
+            });
+            renderApp();
+        };
+
+        window.setCategoryFilter = function(cat) {
+            state.categoryFilter = cat;
+            renderCatalog();
+            
+            // Aggiorna stile bottoni filtri
+            const categories = ['ALL', 'OFFERS', 'Ortofrutta', 'Freschi', 'Dispensa', 'Bevande', 'Igiene & Casa'];
+            categories.forEach(c => {
+                const btn = document.getElementById(`cat-filter-${c.toLowerCase().replace(/[^a-z0-9]/g, '')}`);
+                if (btn) {
+                    if (c === cat) {
+                        btn.className = 'px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium shrink-0';
+                    } else {
+                        btn.className = 'px-3 py-1.5 rounded-lg bg-white text-slate-600 font-medium border border-slate-200 hover:bg-slate-50 shrink-0';
+                    }
+                }
+            });
+        };
+
+        // GESTIONE MODALE PRODOTTO
+        window.openProductModal = function(id = null) {
+            const modal = document.getElementById('modal-product');
+            const form = document.getElementById('product-form');
+            const pricesContainer = document.getElementById('product-prices-inputs');
+            const deleteBtn = document.getElementById('btn-delete-product');
+
+            form.reset();
+
+            if (id) {
+                const prod = state.products.find(p => p.id === id);
+                document.getElementById('modal-product-title').innerText = 'Modifica Prodotto';
+                document.getElementById('prod-id').value = prod.id;
+                document.getElementById('prod-name').value = prod.name;
+                document.getElementById('prod-emoji').value = prod.emoji || '🛒';
+                document.getElementById('prod-category').value = prod.category || 'Altro';
+                document.getElementById('prod-unit').value = prod.unit || '';
+                deleteBtn.classList.remove('hidden');
+
+                // Genera input prezzi per supermercato
+                pricesContainer.innerHTML = state.supermarkets.map(sup => {
+                    const priceInfo = (prod.prices && prod.prices[sup]) || { price: '', offer: false };
+                    return `
+                        <div class="flex items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
+                            <span class="font-semibold text-slate-700 w-24 truncate">${sup}</span>
+                            <div class="flex items-center gap-2">
+                                <label class="flex items-center gap-1 cursor-pointer text-[11px] text-amber-700 font-medium bg-amber-50 px-2 py-1 rounded-md border border-amber-200">
+                                    <input type="checkbox" name="offer_${sup}" ${priceInfo.offer ? 'checked' : ''} class="rounded text-amber-600 focus:ring-amber-500">
+                                    🔥 Offerta
+                                </label>
+                                <div class="relative w-24">
+                                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400">€</span>
+                                    <input type="number" step="0.01" min="0" name="price_${sup}" value="${priceInfo.price || ''}" placeholder="0.00" class="w-full pl-5 pr-2 py-1 bg-white border border-slate-300 rounded-lg text-right font-medium">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } else {
+                document.getElementById('modal-product-title').innerText = 'Nuovo Prodotto';
+                document.getElementById('prod-id').value = '';
+                deleteBtn.classList.add('hidden');
+
+                pricesContainer.innerHTML = state.supermarkets.map(sup => `
+                    <div class="flex items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
+                        <span class="font-semibold text-slate-700 w-24 truncate">${sup}</span>
+                        <div class="flex items-center gap-2">
+                            <label class="flex items-center gap-1 cursor-pointer text-[11px] text-amber-700 font-medium bg-amber-50 px-2 py-1 rounded-md border border-amber-200">
+                                <input type="checkbox" name="offer_${sup}" class="rounded text-amber-600 focus:ring-amber-500">
+                                🔥 Offerta
+                            </label>
+                            <div class="relative w-24">
+                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400">€</span>
+                                <input type="number" step="0.01" min="0" name="price_${sup}" placeholder="0.00" class="w-full pl-5 pr-2 py-1 bg-white border border-slate-300 rounded-lg text-right font-medium">
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            modal.classList.remove('hidden');
+        };
+
+        window.closeProductModal = function() {
+            document.getElementById('modal-product').classList.add('hidden');
+        };
+
+        window.handleProductFormSubmit = function(e) {
+            e.preventDefault();
+            const id = document.getElementById('prod-id').value;
+            const name = document.getElementById('prod-name').value;
+            const emoji = document.getElementById('prod-emoji').value || '🛒';
+            const category = document.getElementById('prod-category').value;
+            const unit = document.getElementById('prod-unit').value;
+
+            const prices = {};
+            state.supermarkets.forEach(sup => {
+                const priceVal = parseFloat(document.querySelector(`input[name="price_${sup}"]`).value);
+                const isOffer = document.querySelector(`input[name="offer_${sup}"]`).checked;
+                if (!isNaN(priceVal) && priceVal > 0) {
+                    prices[sup] = { price: priceVal, offer: isOffer };
+                }
+            });
+
+            if (id) {
+                // Modifica
+                const index = state.products.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    state.products[index] = { ...state.products[index], name, emoji, category, unit, prices };
+                }
+            } else {
+                // Nuovo
+                state.products.push({
+                    id: 'prod-' + Date.now(),
+                    name,
+                    emoji,
+                    category,
+                    unit,
+                    prices,
+                    inList: true,
+                    checked: false,
+                    quantity: 1,
+                    note: ''
+                });
+            }
+
+            saveToCloud();
+            closeProductModal();
+            showToast(id ? 'Prodotto aggiornato!' : 'Nuovo prodotto aggiunto alla lista!');
+        };
+
+        window.deleteCurrentProduct = function() {
+            const id = document.getElementById('prod-id').value;
+            if (id) {
+                state.products = state.products.filter(p => p.id !== id);
+                saveToCloud();
+                closeProductModal();
+                showToast('Prodotto eliminato dal catalogo.');
+            }
+        };
+
+        // GESTIONE CODICE FAMIGLIA
+        window.openFamilyModal = function() {
+            document.getElementById('input-family-code').value = state.familyCode;
+            document.getElementById('modal-family').classList.remove('hidden');
+        };
+
+        window.closeFamilyModal = function() {
+            document.getElementById('modal-family').classList.add('hidden');
+        };
+
+        window.generateRandomFamilyCode = function() {
+            const randomCode = 'FAMIGLIA-' + Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('input-family-code').value = randomCode;
+        };
+
+        window.saveFamilyCode = function() {
+            const newCode = document.getElementById('input-family-code').value.trim().toUpperCase();
+            if (newCode) {
+                state.familyCode = newCode;
+                localStorage.setItem('spesa_family_code', newCode);
+                closeFamilyModal();
+                setupCloudSync();
+                showToast(`Connesso al gruppo: ${newCode}`);
+            }
+        };
+
+        // SUPERMERCATI MANAGEMENT
+        window.promptAddSupermarket = function() {
+            const name = prompt("Inserisci il nome del nuovo supermercato:");
+            if (name && name.trim() !== '') {
+                const cleanName = name.trim();
+                if (!state.supermarkets.includes(cleanName)) {
+                    state.supermarkets.push(cleanName);
+                    saveToCloud();
+                    showToast(`Supermercato ${cleanName} aggiunto.`);
+                }
+            }
+        };
+
+        window.removeSupermarket = function(supName) {
+            if (state.supermarkets.length <= 1) {
+                alert("Devi mantenere almeno un supermercato nell'elenco.");
+                return;
+            }
+            state.supermarkets = state.supermarkets.filter(s => s !== supName);
+            saveToCloud();
+        };
+
+        // CONDIVISIONE WHATSAPP
+        window.shareWhatsApp = function() {
+            const activeItems = state.products.filter(p => p.inList);
+            if (activeItems.length === 0) {
+                showToast("La lista della spesa è vuota.");
+                return;
+            }
+
+            let text = `🛒 *LISTA DELLA SPESA (${state.familyCode})*\n\n`;
+
+            activeItems.forEach(item => {
+                const best = getBestPriceInfo(item);
+                const check = item.checked ? '✅' : '⏹️';
+                text += `${check} *${item.name}* (x${item.quantity || 1}) - ${item.unit || ''}\n`;
+                if (best.supermarket) {
+                    text += `   📍 Conveniente da: ${best.supermarket} (€${best.price.toFixed(2)}${best.isOffer ? ' 🔥 OFFERTA' : ''})\n`;
+                }
+                if (item.note) text += `   📝 Note: ${item.note}\n`;
+            });
+
+            text += `\n📱 *Sincronizzato in tempo reale sull'app!*`;
+
+            const encodedText = encodeURIComponent(text);
+            window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+        };
+
+        // TOAST NOTIFICA SYSTEM
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        // AVVIO APPLICAZIONE
+        window.onload = function() {
+            initFirebase();
+        };
+    </script>
+</body>
+</html>
